@@ -78,6 +78,7 @@ codegen-units = 1
 panic = "abort"
 strip = true
 opt-level = "z"
+debug = false
 
 [profile.dev]
 opt-level = 0

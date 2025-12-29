@@ -87,8 +87,8 @@ SystemCallFilter=~@privileged @resources
 SystemCallArchitectures=native
 SystemCallErrorNumber=EPERM
 
-# Capabilities needed for Bluetooth D-Bus access
-AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+# Note: No capabilities needed - Bluetooth is accessed via D-Bus API,
+# not raw HCI sockets. Access is controlled by 'bluetooth' group membership.
 
 # Resource limits for Pi Zero 2 W (512MB RAM)
 LimitNOFILE=1024
