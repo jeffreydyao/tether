@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/tether-core",
     "crates/tether-server",
+    "crates/tether-mcp",
 ]
 
 [workspace.package]
