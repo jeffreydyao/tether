@@ -1,0 +1,363 @@
+#!/bin/bash
+#
+# sdm plugin: tether
+#
+# This plugin configures the tether service for Raspberry Pi
+# It handles:
+#   - Phase 0: Copy binaries and assets to correct locations
+#   - Phase 1: Set permissions, create directories
+#   - Post-install: Configure systemd services, create first-boot scripts
+#
+
+function loadparams() {
+    source $SDMPT/etc/sdm/sdm-readparams
+}
+
+# $1 is the phase: "0", "1", or "post-install"
+# $2 is the argument list: arg1=val1|arg2=val2|...
+
+phase=$1
+pfx="$(basename $0)"     # Plugin name for logging
+args="$2"
+
+# Define valid and required arguments
+vldargs="|assetdir|"     # Valid arguments (pipe-delimited)
+rqdargs=""               # Required arguments (none for this plugin)
+
+# Asset directory - where our files are staged during build
+# This is set by the build script
+assetdir=""
+
+if [[ "$phase" == "0" ]]; then
+    #=========================================================================
+    # Phase 0: Mounted Disk Environment
+    # The image is mounted at $SDMPT. All file operations must use $SDMPT prefix.
+    # Network and host system resources are available.
+    #=========================================================================
+
+    loadparams
+
+    # Parse plugin arguments
+    plugin_getargs $pfx "$args" "$vldargs" "$rqdargs" || exit
+    plugin_printkeys
+
+    logtoboth "* Plugin $pfx: Phase 0 - Copying tether files to image"
+
+    # Determine asset directory - check common locations
+    if [[ -z "$assetdir" ]]; then
+        # Look for assets in the directory containing this plugin
+        PLUGIN_DIR="$(dirname "$(realpath "$0")")"
+        assetdir="${PLUGIN_DIR}/../assets"
+    fi
+
+    if [[ ! -d "$assetdir" ]]; then
+        logtoboth "? Plugin $pfx: Asset directory not found: $assetdir"
+        exit 1
+    fi
+
+    logtoboth "> Plugin $pfx: Using asset directory: $assetdir"
+
+    #-------------------------------------------------------------------------
+    # Create directory structure in the image
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Creating directory structure"
+
+    mkdir -p $SDMPT/opt/tether/bin
+    mkdir -p $SDMPT/opt/tether/web-ui
+    mkdir -p $SDMPT/opt/tether/config
+    mkdir -p $SDMPT/opt/tether/data
+    mkdir -p $SDMPT/opt/tether/logs
+    mkdir -p $SDMPT/opt/tether/scripts
+    mkdir -p $SDMPT/etc/nginx/sites-available
+    mkdir -p $SDMPT/etc/nginx/sites-enabled
+    mkdir -p $SDMPT/etc/dbus-1/system.d
+
+    #-------------------------------------------------------------------------
+    # Copy binaries
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Copying tether-server binary"
+    cp "$assetdir/bin/tether-server" $SDMPT/opt/tether/bin/
+    chmod 755 $SDMPT/opt/tether/bin/tether-server
+
+    if [[ -f "$assetdir/bin/dumbpipe" ]]; then
+        logtoboth "> Plugin $pfx: Copying dumbpipe binary"
+        cp "$assetdir/bin/dumbpipe" $SDMPT/opt/tether/bin/
+        chmod 755 $SDMPT/opt/tether/bin/dumbpipe
+    fi
+
+    #-------------------------------------------------------------------------
+    # Copy web UI
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Copying web UI"
+    cp -r "$assetdir/web-ui/"* $SDMPT/opt/tether/web-ui/
+
+    #-------------------------------------------------------------------------
+    # Copy systemd service files
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Copying systemd service files"
+
+    cp "$assetdir/systemd/tether-server.service" $SDMPT/etc/systemd/system/
+    cp "$assetdir/systemd/tether-dumbpipe.service" $SDMPT/etc/systemd/system/
+    cp "$assetdir/systemd/tether-network-watchdog.service" $SDMPT/etc/systemd/system/
+
+    chmod 644 $SDMPT/etc/systemd/system/tether*.service
+
+    #-------------------------------------------------------------------------
+    # Copy scripts
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Copying management scripts"
+
+    cp "$assetdir/scripts/tether-network-watchdog.sh" $SDMPT/opt/tether/scripts/
+    cp "$assetdir/scripts/tether-save-ticket.sh" $SDMPT/opt/tether/scripts/
+    cp "$assetdir/scripts/tether-setup-user.sh" $SDMPT/opt/tether/scripts/
+    cp "$assetdir/scripts/tether-setup-dirs.sh" $SDMPT/opt/tether/scripts/
+
+    chmod 755 $SDMPT/opt/tether/scripts/*.sh
+
+    #-------------------------------------------------------------------------
+    # Copy D-Bus configuration
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Copying D-Bus configuration"
+
+    cp "$assetdir/dbus/tether-bluetooth.conf" $SDMPT/etc/dbus-1/system.d/
+    cp "$assetdir/dbus/tether-networkmanager.conf" $SDMPT/etc/dbus-1/system.d/
+
+    chmod 644 $SDMPT/etc/dbus-1/system.d/tether*.conf
+
+    #-------------------------------------------------------------------------
+    # Copy nginx configuration
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Copying nginx configuration"
+
+    cp "$assetdir/nginx/tether.conf" $SDMPT/etc/nginx/sites-available/
+
+    # Remove default site, link tether site
+    rm -f $SDMPT/etc/nginx/sites-enabled/default
+    ln -sf /etc/nginx/sites-available/tether.conf $SDMPT/etc/nginx/sites-enabled/tether.conf
+
+    #-------------------------------------------------------------------------
+    # Copy default configuration
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Copying default configuration"
+
+    cp "$assetdir/config/tether.toml" $SDMPT/opt/tether/config/
+
+    logtoboth "* Plugin $pfx: Phase 0 complete"
+
+elif [[ "$phase" == "1" ]]; then
+    #=========================================================================
+    # Phase 1: nspawn Container Environment
+    # Running inside the image via systemd-nspawn.
+    # $SDMPT is empty - use paths directly (e.g., /opt/tether, not $SDMPT/opt/tether)
+    # apt and systemctl commands work here.
+    #=========================================================================
+
+    loadparams
+
+    logtoboth "* Plugin $pfx: Phase 1 - Configuring tether inside container"
+
+    #-------------------------------------------------------------------------
+    # Set ownership of tether directories
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Setting file ownership"
+
+    # The 'tether' user is created by the user plugin before this runs
+    chown -R tether:tether /opt/tether
+
+    # Config and data need to be writable by the service
+    chmod 755 /opt/tether
+    chmod 755 /opt/tether/bin
+    chmod 755 /opt/tether/web-ui
+    chmod 750 /opt/tether/config
+    chmod 750 /opt/tether/data
+    chmod 755 /opt/tether/logs
+    chmod 755 /opt/tether/scripts
+
+    # Config file should be readable by tether user
+    chmod 640 /opt/tether/config/tether.toml
+
+    #-------------------------------------------------------------------------
+    # Configure NetworkManager to allow hotspot management
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Configuring NetworkManager permissions"
+
+    # Create polkit rule to allow tether user to manage NetworkManager
+    mkdir -p /etc/polkit-1/rules.d
+
+    cat > /etc/polkit-1/rules.d/50-tether-network.rules << 'POLKIT_EOF'
+// Allow tether user to manage NetworkManager connections
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 &&
+        subject.user == "tether") {
+        return polkit.Result.YES;
+    }
+});
+POLKIT_EOF
+
+    chmod 644 /etc/polkit-1/rules.d/50-tether-network.rules
+
+    logtoboth "* Plugin $pfx: Phase 1 complete"
+
+elif [[ "$phase" == "post-install" ]]; then
+    #=========================================================================
+    # Post-install Phase: After all packages are installed
+    # Still in nspawn container. Final configuration goes here.
+    #=========================================================================
+
+    loadparams
+
+    logtoboth "* Plugin $pfx: Post-install - Final configuration"
+
+    #-------------------------------------------------------------------------
+    # Create first-boot script for initial setup
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Creating first-boot initialization script"
+
+    mkdir -p /etc/sdm/0piboot
+
+    # This script runs on first boot to initialize tether
+    cat > /etc/sdm/0piboot/099-tether-firstboot.sh << 'FIRSTBOOT_EOF'
+#!/bin/bash
+#
+# Tether first-boot initialization
+# This runs once on the very first boot of the Pi
+#
+
+LOGFILE="/opt/tether/logs/firstboot.log"
+exec > >(tee -a "$LOGFILE") 2>&1
+
+echo "=========================================="
+echo "Tether First Boot Initialization"
+echo "Date: $(date)"
+echo "=========================================="
+
+# Wait for system to fully initialize
+sleep 5
+
+#-----------------------------------------------------------------------------
+# Check if this is truly first boot (no config file modified)
+#-----------------------------------------------------------------------------
+
+CONFIG_FILE="/opt/tether/config/tether.toml"
+DATA_DIR="/opt/tether/data"
+
+if [[ -f "$DATA_DIR/.initialized" ]]; then
+    echo "System already initialized, skipping first-boot setup"
+    exit 0
+fi
+
+echo "Starting first-boot initialization..."
+
+#-----------------------------------------------------------------------------
+# Initialize data directory
+#-----------------------------------------------------------------------------
+
+echo "Initializing data directory..."
+mkdir -p "$DATA_DIR"
+touch "$DATA_DIR/.initialized"
+chown -R tether:tether "$DATA_DIR"
+
+#-----------------------------------------------------------------------------
+# Generate unique device identifier
+#-----------------------------------------------------------------------------
+
+echo "Generating device identifier..."
+DEVICE_ID=$(cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2 | tail -c 9)
+echo "Device ID: $DEVICE_ID"
+
+#-----------------------------------------------------------------------------
+# Ensure services are running
+#-----------------------------------------------------------------------------
+
+echo "Starting tether services..."
+
+systemctl daemon-reload
+systemctl enable tether-server.service
+systemctl enable tether-dumbpipe.service
+systemctl enable tether-network-watchdog.service
+systemctl start tether-server.service
+
+echo "=========================================="
+echo "First-boot initialization complete"
+echo "=========================================="
+
+FIRSTBOOT_EOF
+
+    chmod 755 /etc/sdm/0piboot/099-tether-firstboot.sh
+
+    #-------------------------------------------------------------------------
+    # Create systemd override for NetworkManager to wait for it
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Creating service dependencies"
+
+    mkdir -p /etc/systemd/system/tether-server.service.d
+
+    cat > /etc/systemd/system/tether-server.service.d/override.conf << 'OVERRIDE_EOF'
+[Unit]
+After=network-online.target NetworkManager.service bluetooth.service
+Wants=network-online.target
+OVERRIDE_EOF
+
+    chmod 644 /etc/systemd/system/tether-server.service.d/override.conf
+
+    #-------------------------------------------------------------------------
+    # Configure log rotation
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Configuring log rotation"
+
+    cat > /etc/logrotate.d/tether << 'LOGROTATE_EOF'
+/opt/tether/logs/*.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 tether tether
+}
+LOGROTATE_EOF
+
+    chmod 644 /etc/logrotate.d/tether
+
+    #-------------------------------------------------------------------------
+    # Add helpful message to motd
+    #-------------------------------------------------------------------------
+
+    logtoboth "> Plugin $pfx: Updating message of the day"
+
+    cat >> /etc/motd << 'MOTD_EOF'
+
+========================================
+  TETHER - Phone Accountability Device
+========================================
+Web UI:    http://tether.local or http://$(hostname -I | awk '{print $1}')
+Logs:      /opt/tether/logs/
+Config:    /opt/tether/config/tether.toml
+Status:    systemctl status tether-server
+========================================
+
+MOTD_EOF
+
+    logtoboth "* Plugin $pfx: Post-install complete"
+
+    plugin_addnote ""
+    plugin_addnote "===== Tether Configuration ====="
+    plugin_addnote "On first boot, connect to WiFi network: TetherSetup"
+    plugin_addnote "Then visit http://192.168.4.1 to configure"
+    plugin_addnote "================================"
+    plugin_addnote ""
+
+fi

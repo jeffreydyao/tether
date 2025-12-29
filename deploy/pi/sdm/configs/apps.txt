@@ -1,0 +1,36 @@
+# Tether - Required Packages
+# One package per line, comments start with #
+
+# Web server for UI
+nginx
+
+# Bluetooth stack
+bluez
+bluetooth
+pi-bluetooth
+
+# Network management (already included in Bookworm but ensure it's there)
+network-manager
+
+# Useful utilities
+curl
+wget
+jq
+
+# mDNS for tether.local hostname
+avahi-daemon
+
+# Time synchronization (chrony plugin handles this, but ensure base)
+chrony
+
+# SSL certificates for potential HTTPS
+ca-certificates
+
+# System utilities
+htop
+vim-tiny
+
+# For network diagnostics
+iproute2
+iputils-ping
+dnsutils

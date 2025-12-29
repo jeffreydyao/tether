@@ -1,0 +1,15 @@
+# Copyfiles configuration for tether
+# Format: from=source|to=destination|chmod=mode|chown=owner:group|mkdirif=yes
+
+# Note: The tether plugin handles most file copying internally
+# This file is for any additional system-wide configurations
+
+# The tether plugin copies:
+# - /opt/tether/bin/tether-server
+# - /opt/tether/bin/dumbpipe
+# - /opt/tether/web-ui/*
+# - /opt/tether/config/tether.toml
+# - /opt/tether/scripts/*
+# - /etc/systemd/system/tether*.service
+# - /etc/nginx/sites-available/tether.conf
+# - /etc/dbus-1/system.d/tether*.conf
