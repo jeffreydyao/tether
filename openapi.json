@@ -1,0 +1,997 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "tether API",
+    "description": "\n# tether API\n\ntether helps you hold yourself accountable to keep your phone away from your bedroom at night.\n\n## Overview\n\nThis API runs on a Raspberry Pi and provides:\n\n1. **Proximity Detection**: Check if your phone is near the Raspberry Pi via Bluetooth\n2. **Emergency Passes**: A limited number of monthly passes for legitimate exceptions\n3. **Configuration**: Manage Bluetooth devices and settings\n\n## For AI Agents (MCP)\n\nIf you're accessing this API via MCP tools:\n\n- **checkProximity**: Verify the phone is in its designated spot. Returns `is_nearby: true` when close.\n- **getPasses**: Check how many emergency passes remain this month.\n- **usePass**: Use when user has legitimate reason (on-call, emergency). Requires a reason.\n- **getPassHistory**: Review past pass usage to identify patterns.\n\n## Design Philosophy\n\n- **Lazy evaluation**: Bluetooth checks only happen when requested\n- **Intentional friction**: Passes require reasons to encourage mindfulness\n- **Delayed effects**: Pass count changes only apply next month to prevent gaming\n",
+    "contact": {
+      "name": "Jeffrey",
+      "email": "jeffrey@example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Local tether server"
+    }
+  ],
+  "paths": {
+    "/bluetooth/proximity": {
+      "get": {
+        "tags": [
+          "bluetooth"
+        ],
+        "summary": "Check if configured device is nearby",
+        "description": "Performs a Bluetooth scan to determine if the configured device is within the proximity threshold.",
+        "operationId": "checkProximity",
+        "responses": {
+          "200": {
+            "description": "Proximity check completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProximityResponse"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Bluetooth device not configured"
+          },
+          "503": {
+            "description": "Bluetooth service unavailable"
+          }
+        }
+      }
+    },
+    "/bluetooth/scan": {
+      "get": {
+        "tags": [
+          "bluetooth"
+        ],
+        "summary": "Scan for Bluetooth devices",
+        "description": "Performs a Bluetooth scan and returns all discovered devices. Use this during onboarding to find the user's phone.",
+        "operationId": "scanDevices",
+        "responses": {
+          "200": {
+            "description": "Scan completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanDevicesResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Bluetooth service unavailable"
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Get current configuration",
+        "description": "Returns the current system configuration including Bluetooth target, timezone, and passes per month.",
+        "operationId": "getConfig",
+        "responses": {
+          "200": {
+            "description": "Configuration retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/bluetooth": {
+      "put": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Update Bluetooth target device",
+        "description": "Updates the Bluetooth device to track for proximity detection.",
+        "operationId": "updateBluetooth",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBluetoothRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Bluetooth configuration updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateBluetoothResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Bluetooth address format"
+          }
+        }
+      }
+    },
+    "/config/onboarding/complete": {
+      "put": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Complete onboarding",
+        "description": "Marks the initial onboarding as complete. Requires Bluetooth target to be configured first.",
+        "operationId": "completeOnboarding",
+        "responses": {
+          "200": {
+            "description": "Onboarding completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteOnboardingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Already completed"
+          },
+          "424": {
+            "description": "Prerequisites not met"
+          }
+        }
+      }
+    },
+    "/config/passes": {
+      "put": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Update passes per month",
+        "description": "Updates the number of emergency passes allowed per month. If passes have already been used this month, the change will take effect next month.",
+        "operationId": "updatePassesPerMonth",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePassesPerMonthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Passes per month updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatePassesPerMonthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid value"
+          }
+        }
+      }
+    },
+    "/config/timezone": {
+      "put": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Update timezone",
+        "description": "Updates the timezone used for pass reset calculations.",
+        "operationId": "updateTimezone",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTimezoneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Timezone updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateTimezoneResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid timezone"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Check service health",
+        "description": "Returns basic service status information. Use this endpoint for load balancer health checks and monitoring.",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/passes": {
+      "get": {
+        "tags": [
+          "passes"
+        ],
+        "summary": "Get remaining passes this month",
+        "description": "Returns current pass status including remaining count, total allocated, and the UTC timestamp when passes will reset.",
+        "operationId": "getPasses",
+        "responses": {
+          "200": {
+            "description": "Pass status retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/passes/history": {
+      "get": {
+        "tags": [
+          "passes"
+        ],
+        "summary": "Get pass usage history",
+        "description": "Returns all pass usage entries for a specific month. Defaults to the current month if no month is specified.",
+        "operationId": "getPassHistory",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "description": "Month to retrieve history for in YYYY-MM format.\nDefaults to current month if not specified.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "example": "2025-01"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "History retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassHistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid month format"
+          }
+        }
+      }
+    },
+    "/passes/use": {
+      "post": {
+        "tags": [
+          "passes"
+        ],
+        "summary": "Use a pass",
+        "description": "Uses one of the remaining passes for this month. A reason is required and will be recorded in the history.",
+        "operationId": "usePass",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsePassRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Pass used successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsePassResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (empty reason or too long)"
+          },
+          "409": {
+            "description": "No passes remaining"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BluetoothConfigResponse": {
+        "type": "object",
+        "description": "Bluetooth configuration in response.",
+        "required": [
+          "target_address",
+          "target_name",
+          "rssi_threshold",
+          "is_configured"
+        ],
+        "properties": {
+          "is_configured": {
+            "type": "boolean",
+            "description": "Whether a real device has been configured (not placeholder).",
+            "example": true
+          },
+          "rssi_threshold": {
+            "type": "integer",
+            "format": "int32",
+            "description": "RSSI threshold for proximity detection.",
+            "example": -60
+          },
+          "target_address": {
+            "type": "string",
+            "description": "Bluetooth MAC address of target device.",
+            "example": "AA:BB:CC:DD:EE:FF"
+          },
+          "target_name": {
+            "type": "string",
+            "description": "User-friendly name of the device.",
+            "example": "iPhone 15 Pro"
+          }
+        },
+        "example": {
+          "is_configured": true,
+          "rssi_threshold": -60,
+          "target_address": "AA:BB:CC:DD:EE:FF",
+          "target_name": "iPhone 15 Pro"
+        }
+      },
+      "CompleteOnboardingResponse": {
+        "type": "object",
+        "description": "Response after completing onboarding.",
+        "required": [
+          "success",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Message about onboarding status."
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether onboarding was completed."
+          }
+        }
+      },
+      "ConfigResponse": {
+        "type": "object",
+        "description": "Current configuration response.",
+        "required": [
+          "bluetooth",
+          "timezone",
+          "passes_per_month",
+          "onboarding_complete"
+        ],
+        "properties": {
+          "bluetooth": {
+            "$ref": "#/components/schemas/BluetoothConfigResponse",
+            "description": "Bluetooth target configuration."
+          },
+          "onboarding_complete": {
+            "type": "boolean",
+            "description": "Whether initial onboarding has been completed.",
+            "example": true
+          },
+          "passes_per_month": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of passes allowed per month.",
+            "example": 3,
+            "minimum": 0
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Configured timezone (IANA format).",
+            "example": "America/Los_Angeles"
+          }
+        },
+        "example": {
+          "bluetooth": {
+            "rssi_threshold": -60,
+            "target_address": "AA:BB:CC:DD:EE:FF",
+            "target_name": "iPhone 15 Pro"
+          },
+          "onboarding_complete": true,
+          "passes_per_month": 3,
+          "timezone": "America/Los_Angeles"
+        }
+      },
+      "DiscoveredDevice": {
+        "type": "object",
+        "description": "A discovered Bluetooth device.",
+        "required": [
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Bluetooth MAC address.",
+            "example": "AA:BB:CC:DD:EE:FF"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Device name (if broadcast).",
+            "example": "iPhone 15 Pro"
+          },
+          "rssi_dbm": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Signal strength in dBm.",
+            "example": -45
+          }
+        },
+        "example": {
+          "address": "AA:BB:CC:DD:EE:FF",
+          "name": "iPhone 15 Pro",
+          "rssi_dbm": -45
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Standard JSON error response body.",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "details": {
+            "description": "Optional additional details for debugging."
+          },
+          "error": {
+            "type": "string",
+            "description": "Machine-readable error code (e.g., \"invalid_bluetooth_address\").",
+            "example": "invalid_request"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message.",
+            "example": "The provided value is not valid"
+          }
+        },
+        "example": {
+          "details": null,
+          "error": "invalid_request",
+          "message": "The provided value is not valid"
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "description": "Health check response.",
+        "required": [
+          "status",
+          "version",
+          "onboarding_complete"
+        ],
+        "properties": {
+          "onboarding_complete": {
+            "type": "boolean",
+            "description": "Whether initial onboarding has been completed.",
+            "example": true
+          },
+          "status": {
+            "type": "string",
+            "description": "Service status.",
+            "example": "ok"
+          },
+          "version": {
+            "type": "string",
+            "description": "Service version from Cargo.toml.",
+            "example": "0.1.0"
+          }
+        },
+        "example": {
+          "onboarding_complete": true,
+          "status": "ok",
+          "version": "0.1.0"
+        }
+      },
+      "PassHistoryEntry": {
+        "type": "object",
+        "description": "A single pass usage entry in history.",
+        "required": [
+          "used_at_utc",
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Reason provided when using the pass.",
+            "example": "On-call for production incident"
+          },
+          "used_at_utc": {
+            "type": "string",
+            "description": "UTC timestamp when the pass was used.",
+            "example": "2025-01-15T03:30:00Z"
+          }
+        },
+        "example": {
+          "reason": "On-call for production incident",
+          "used_at_utc": "2025-01-15T03:30:00Z"
+        }
+      },
+      "PassHistoryResponse": {
+        "type": "object",
+        "description": "Pass usage history response.",
+        "required": [
+          "month",
+          "entries",
+          "total_used",
+          "total_per_month"
+        ],
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PassHistoryEntry"
+            },
+            "description": "List of pass usage entries for the month."
+          },
+          "month": {
+            "type": "string",
+            "description": "Month in YYYY-MM format.",
+            "example": "2025-01"
+          },
+          "total_per_month": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Total passes allocated per month.",
+            "example": 3,
+            "minimum": 0
+          },
+          "total_used": {
+            "type": "integer",
+            "description": "Total passes used this month.",
+            "example": 1,
+            "minimum": 0
+          }
+        },
+        "example": {
+          "entries": [
+            {
+              "reason": "On-call for production incident",
+              "used_at_utc": "2025-01-15T03:30:00Z"
+            }
+          ],
+          "month": "2025-01",
+          "total_per_month": 3,
+          "total_used": 1
+        }
+      },
+      "PassesResponse": {
+        "type": "object",
+        "description": "Current pass status for the month.",
+        "required": [
+          "remaining",
+          "total_per_month",
+          "used_this_month",
+          "month",
+          "resets_at_utc",
+          "timezone"
+        ],
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Current month in YYYY-MM format.",
+            "example": "2025-01"
+          },
+          "remaining": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of passes remaining this month.",
+            "example": 2,
+            "minimum": 0
+          },
+          "resets_at_utc": {
+            "type": "string",
+            "description": "UTC timestamp when passes will reset.",
+            "example": "2025-02-01T08:00:00Z"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Configured timezone for reset calculation.",
+            "example": "America/Los_Angeles"
+          },
+          "total_per_month": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Total passes allocated per month (from config).",
+            "example": 3,
+            "minimum": 0
+          },
+          "used_this_month": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of passes used this month.",
+            "example": 1,
+            "minimum": 0
+          }
+        },
+        "example": {
+          "month": "2025-01",
+          "remaining": 2,
+          "resets_at_utc": "2025-02-01T08:00:00Z",
+          "timezone": "America/Los_Angeles",
+          "total_per_month": 3,
+          "used_this_month": 1
+        }
+      },
+      "ProximityResponse": {
+        "type": "object",
+        "description": "Proximity check response.",
+        "required": [
+          "device_name",
+          "device_address",
+          "is_nearby",
+          "threshold_dbm",
+          "checked_at_utc"
+        ],
+        "properties": {
+          "checked_at_utc": {
+            "type": "string",
+            "description": "UTC timestamp of when this check was performed.",
+            "example": "2025-01-15T03:30:00Z"
+          },
+          "device_address": {
+            "type": "string",
+            "description": "The Bluetooth MAC address of the tracked device.",
+            "example": "AA:BB:CC:DD:EE:FF"
+          },
+          "device_name": {
+            "type": "string",
+            "description": "The configured Bluetooth device name.",
+            "example": "iPhone 15 Pro"
+          },
+          "is_nearby": {
+            "type": "boolean",
+            "description": "Whether the device is considered nearby based on RSSI threshold.",
+            "example": true
+          },
+          "rssi_dbm": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The current RSSI signal strength in dBm.",
+            "example": -45
+          },
+          "threshold_dbm": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The configured RSSI threshold in dBm.",
+            "example": -60
+          }
+        },
+        "example": {
+          "checked_at_utc": "2025-01-15T03:30:00Z",
+          "device_address": "AA:BB:CC:DD:EE:FF",
+          "device_name": "iPhone 15 Pro",
+          "is_nearby": true,
+          "rssi_dbm": -45,
+          "threshold_dbm": -60
+        }
+      },
+      "ScanDevicesResponse": {
+        "type": "object",
+        "description": "Device scan response.",
+        "required": [
+          "devices",
+          "scan_duration_secs",
+          "scanned_at_utc"
+        ],
+        "properties": {
+          "devices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscoveredDevice"
+            },
+            "description": "List of discovered devices."
+          },
+          "scan_duration_secs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How long the scan took.",
+            "example": 5,
+            "minimum": 0
+          },
+          "scanned_at_utc": {
+            "type": "string",
+            "description": "When the scan completed.",
+            "example": "2025-01-15T03:30:00Z"
+          }
+        },
+        "example": {
+          "devices": [
+            {
+              "address": "AA:BB:CC:DD:EE:FF",
+              "name": "iPhone 15 Pro",
+              "rssi_dbm": -45
+            }
+          ],
+          "scan_duration_secs": 5,
+          "scanned_at_utc": "2025-01-15T03:30:00Z"
+        }
+      },
+      "UpdateBluetoothRequest": {
+        "type": "object",
+        "description": "Request to update Bluetooth target device.",
+        "required": [
+          "target_address",
+          "target_name"
+        ],
+        "properties": {
+          "rssi_threshold": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Optional RSSI threshold (-100 to 0 dBm). Defaults to -60.",
+            "example": -60
+          },
+          "target_address": {
+            "type": "string",
+            "description": "Bluetooth MAC address (XX:XX:XX:XX:XX:XX format).",
+            "example": "AA:BB:CC:DD:EE:FF"
+          },
+          "target_name": {
+            "type": "string",
+            "description": "User-friendly name for the device.",
+            "example": "iPhone 15 Pro"
+          }
+        },
+        "example": {
+          "rssi_threshold": -60,
+          "target_address": "AA:BB:CC:DD:EE:FF",
+          "target_name": "iPhone 15 Pro"
+        }
+      },
+      "UpdateBluetoothResponse": {
+        "type": "object",
+        "description": "Response after updating Bluetooth configuration.",
+        "required": [
+          "success",
+          "bluetooth"
+        ],
+        "properties": {
+          "bluetooth": {
+            "$ref": "#/components/schemas/BluetoothConfigResponse",
+            "description": "Updated configuration."
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether the update was successful."
+          }
+        }
+      },
+      "UpdatePassesPerMonthRequest": {
+        "type": "object",
+        "description": "Request to update passes per month.",
+        "required": [
+          "per_month"
+        ],
+        "properties": {
+          "per_month": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of passes per month (0-31).",
+            "example": 3,
+            "maximum": 31,
+            "minimum": 0
+          }
+        },
+        "example": {
+          "per_month": 3
+        }
+      },
+      "UpdatePassesPerMonthResponse": {
+        "type": "object",
+        "description": "Response after updating passes per month.",
+        "required": [
+          "success",
+          "per_month",
+          "pending",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Message explaining when the change takes effect."
+          },
+          "pending": {
+            "type": "boolean",
+            "description": "Whether the change is pending (will apply next month).",
+            "example": true
+          },
+          "per_month": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Updated passes per month value.",
+            "example": 3,
+            "minimum": 0
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether the update was successful."
+          }
+        }
+      },
+      "UpdateTimezoneRequest": {
+        "type": "object",
+        "description": "Request to update timezone.",
+        "required": [
+          "timezone"
+        ],
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone name (e.g., \"America/Los_Angeles\").",
+            "example": "America/Los_Angeles"
+          }
+        },
+        "example": {
+          "timezone": "America/Los_Angeles"
+        }
+      },
+      "UpdateTimezoneResponse": {
+        "type": "object",
+        "description": "Response after updating timezone.",
+        "required": [
+          "success",
+          "timezone"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the update was successful."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Updated timezone.",
+            "example": "America/Los_Angeles"
+          }
+        }
+      },
+      "UsePassRequest": {
+        "type": "object",
+        "description": "Request body for using a pass.",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for using the pass. Required and must be non-empty.\nMaximum 500 characters.",
+            "example": "On-call for production incident tonight",
+            "maxLength": 500,
+            "minLength": 1
+          }
+        },
+        "example": {
+          "reason": "On-call for production incident tonight"
+        }
+      },
+      "UsePassResponse": {
+        "type": "object",
+        "description": "Response after successfully using a pass.",
+        "required": [
+          "success",
+          "remaining",
+          "used_at_utc",
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "The reason that was recorded.",
+            "example": "On-call for production incident tonight"
+          },
+          "remaining": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of passes remaining after this use.",
+            "example": 1,
+            "minimum": 0
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether the pass was successfully used.",
+            "example": true
+          },
+          "used_at_utc": {
+            "type": "string",
+            "description": "UTC timestamp when the pass was used.",
+            "example": "2025-01-15T03:30:00Z"
+          }
+        },
+        "example": {
+          "reason": "On-call for production incident tonight",
+          "remaining": 1,
+          "success": true,
+          "used_at_utc": "2025-01-15T03:30:00Z"
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "system",
+      "description": "Health checks and system status"
+    },
+    {
+      "name": "passes",
+      "description": "Emergency pass management - allows keeping phone nearby for legitimate reasons"
+    },
+    {
+      "name": "config",
+      "description": "System configuration including Bluetooth device, timezone, and pass settings"
+    },
+    {
+      "name": "bluetooth",
+      "description": "Bluetooth proximity detection and device scanning"
+    }
+  ]
+}

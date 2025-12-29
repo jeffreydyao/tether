@@ -6,6 +6,7 @@
 //! - `health` - Service health checks
 //! - `passes` - Monthly pass management
 //! - `error` - API error types
+//! - `openapi` - OpenAPI specification generation
 
 use axum::Router;
 
@@ -15,11 +16,15 @@ pub mod bluetooth;
 pub mod config;
 pub mod error;
 pub mod health;
+pub mod openapi;
 pub mod passes;
 
 // Re-export commonly used types
 #[allow(unused_imports)]
 pub use error::{ApiError, ApiResult, ErrorResponse};
+
+// Re-export OpenAPI utilities for the gen-openapi binary
+pub use openapi::get_openapi_json;
 
 /// Creates the combined API router with all endpoints.
 ///
@@ -30,7 +35,8 @@ pub use error::{ApiError, ApiResult, ErrorResponse};
 /// /api
 /// ├── /passes          - Pass status, history, and usage
 /// ├── /config          - Configuration management
-/// └── /bluetooth       - Proximity and device scanning
+/// ├── /bluetooth       - Proximity and device scanning
+/// └── /docs            - OpenAPI specification
 /// ```
 pub fn create_router(state: SharedState) -> Router {
     Router::new()
@@ -40,7 +46,8 @@ pub fn create_router(state: SharedState) -> Router {
             Router::new()
                 .nest("/passes", passes::router())
                 .nest("/config", config::router())
-                .nest("/bluetooth", bluetooth::router()),
+                .nest("/bluetooth", bluetooth::router())
+                .nest("/docs", openapi::router()),
         )
         .with_state(state)
 }

@@ -7,9 +7,17 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[lib]
+name = "tether_server"
+path = "src/lib.rs"
+
 [[bin]]
 name = "tether-server"
 path = "src/main.rs"
+
+[[bin]]
+name = "gen-openapi"
+path = "src/bin/gen_openapi.rs"
 
 [features]
 default = ["bluetooth"]
