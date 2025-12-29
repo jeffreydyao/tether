@@ -501,7 +501,11 @@ impl PassManager {
     ///
     /// Uses atomic write (write to temp file, then rename) to prevent
     /// data corruption if the process crashes mid-write.
-    fn save(&self) -> PassResult<()> {
+    ///
+    /// Note: This is called automatically by `use_pass`, `set_per_month`,
+    /// and `maybe_reset_month`. You only need to call this directly if
+    /// you're making custom modifications to the data.
+    pub fn save(&self) -> PassResult<()> {
         let json = serde_json::to_string_pretty(&self.data)?;
 
         // Atomic write: write to temp file, then rename

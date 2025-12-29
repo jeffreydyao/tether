@@ -208,13 +208,8 @@ async fn init_bluetooth(_config: &Config) -> Option<tether_core::BluetoothScanne
 /// 2. **CorsLayer** (dev only): Handles CORS preflight and headers
 /// 3. Route-specific handlers
 fn build_router(state: SharedState, is_production: bool) -> Router {
-    // TODO: API routes will be added in sub-phase 1.7
-    let api_routes = Router::new().with_state(state);
-
-    // Build the main router
-    let mut app = Router::new()
-        // API routes under /api prefix
-        .nest("/api", api_routes);
+    // Build the main router with all API routes
+    let mut app = api::create_router(state);
 
     // Apply middleware using ServiceBuilder (executes bottom-to-top)
     let trace_layer = TraceLayer::new_for_http()
