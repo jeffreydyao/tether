@@ -32,8 +32,8 @@ BASE_IMAGE_DIR="${PROJECT_ROOT}/.cache/pi-images"
 BASE_IMAGE="${BASE_IMAGE_DIR}/raspios-bookworm-arm64-lite.img"
 
 # Built artifacts
-PI_BINARY="${PROJECT_ROOT}/dist/pi/tether-server"
-WEB_DIST="${PROJECT_ROOT}/web/dist"
+PI_BINARY="${PROJECT_ROOT}/target/pi/tether-server"
+WEB_DIST="${PROJECT_ROOT}/web-ui/dist"
 
 # sdm configuration directory
 SDM_CONFIG_DIR="${PROJECT_ROOT}/pi/sdm-config"

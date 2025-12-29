@@ -26,9 +26,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-WEB_DIR="${PROJECT_ROOT}/web"
+WEB_DIR="${PROJECT_ROOT}/web-ui"
 WEB_DIST_DIR="${WEB_DIR}/dist"
-CLIENT_OUTPUT_DIR="${WEB_DIR}/src/client"
+CLIENT_OUTPUT_DIR="${WEB_DIR}/src/api"
 OPENAPI_FILE="${PROJECT_ROOT}/openapi.json"
 
 # Build options

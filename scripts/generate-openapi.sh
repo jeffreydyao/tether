@@ -36,7 +36,7 @@ OPENAPI_PACKAGE="tether-server"
 # Output configuration
 OPENAPI_OUTPUT_FILE="${PROJECT_ROOT}/openapi.json"
 OUTPUT_FORMAT="json"
-CLIENT_OUTPUT_DIR="${PROJECT_ROOT}/web/src/client"
+CLIENT_OUTPUT_DIR="${PROJECT_ROOT}/web-ui/src/api"
 SKIP_CLIENT=false
 
 # -----------------------------------------------------------------------------
@@ -276,7 +276,7 @@ generate_typescript_client() {
     log_info "Generating TypeScript client from OpenAPI spec..."
 
     # Check if web directory exists (might be building MCP only)
-    if [[ ! -d "${PROJECT_ROOT}/web" ]]; then
+    if [[ ! -d "${PROJECT_ROOT}/web-ui" ]]; then
         log_warning "Web directory not found. Skipping TypeScript client generation."
         return 0
     fi
@@ -292,7 +292,7 @@ generate_typescript_client() {
     mkdir -p "${CLIENT_OUTPUT_DIR}"
 
     (
-        cd "${PROJECT_ROOT}/web"
+        cd "${PROJECT_ROOT}/web-ui"
 
         # Generate TypeScript client using @hey-api/openapi-ts
         bunx @hey-api/openapi-ts \

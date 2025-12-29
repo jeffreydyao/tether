@@ -28,7 +28,7 @@ PI_TARGET_64 := aarch64-unknown-linux-gnu
 # Output directories
 DIST_DIR := dist
 PI_DIST_DIR := $(DIST_DIR)/pi
-WEB_DIST_DIR := web/dist
+WEB_DIST_DIR := web-ui/dist
 MCP_DIST_DIR := $(DIST_DIR)/mcp
 
 # Binary names
@@ -39,7 +39,7 @@ MCP_BINARY := tether-mcp
 SCRIPTS_DIR := scripts
 
 # Web UI directory
-WEB_DIR := web
+WEB_DIR := web-ui
 
 # Quietable commands (use V=1 for verbose output)
 Q := $(if $(V),,@)
