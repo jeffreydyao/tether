@@ -109,7 +109,7 @@ Use dumbpipe to expose the HTTP server, then make the ticket accessible via a lo
 
 ## Web UI
 
-Create a Vite + React + TypeScript @shadcn/ui app using the shadcn CLI: https://ui.shadcn.com/docs/cli. This app should run locally on the Raspberry Pi and be accessible on the local network ONLY. Use https://biomejs.dev/guides/getting-started/ for linting the web UI.
+Create a Vite + React + TypeScript @shadcn/ui app using the shadcn CLI: https://ui.shadcn.com/docs/cli. Use the bun package manager. This app should run locally on the Raspberry Pi and be accessible on the local network ONLY. Use https://biomejs.dev/guides/getting-started/ for linting the web UI.
 
 You can design the architecture and visual layout of the app; you should use the frontend-design plugin/skill to do this. We should use minimal libraries, keep the code as simple as possible (don't be afraid to use libraries where required), and only use @shadcn/ui for components.
 
@@ -134,6 +134,8 @@ The web UI should have the following functionality:
 Most importantly, IT SHOULD BE MOBILE FRIENDLY - so we should use `<Drawer />` on mobile devices and a iOS-style tab navigation, etc.
 
 The web UI is hosted on the Raspberry Pi. We should generate a type-safe API client to query the backend using [openapi-ts](https://github.com/hey-api/openapi-ts).
+
+When building for the Raspberry Pi, build it for production and serve it properly.
 
 # MCP server
 
