@@ -7,7 +7,7 @@ use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::config::TetherConfig;
+use crate::config::PassesConfig;
 use crate::error::{Error, Result};
 use crate::storage::Storage;
 
@@ -49,13 +49,16 @@ impl MonthlyPassState {
 /// Manager for pass allocation and usage tracking.
 pub struct PassManager {
     storage: Storage,
-    config: TetherConfig,
+    passes_config: PassesConfig,
 }
 
 impl PassManager {
     /// Create a new pass manager.
-    pub fn new(storage: Storage, config: TetherConfig) -> Self {
-        Self { storage, config }
+    pub fn new(storage: Storage, passes_config: PassesConfig) -> Self {
+        Self {
+            storage,
+            passes_config,
+        }
     }
 
     /// Get the current month's pass state.
@@ -105,7 +108,7 @@ impl PassManager {
             None => Ok(MonthlyPassState {
                 year,
                 month,
-                allocated: self.config.passes_per_month,
+                allocated: self.passes_config.per_month,
                 used: Vec::new(),
             }),
         }

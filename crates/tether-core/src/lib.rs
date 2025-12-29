@@ -32,7 +32,10 @@ pub mod types;
 
 // Re-export primary types for convenience
 pub use bluetooth::BluetoothScanner;
-pub use config::TetherConfig;
+pub use config::{
+    is_valid_mac_address, is_valid_timezone_format, BluetoothConfig, Config, ConfigError,
+    ConfigResult, PassesConfig, SystemConfig, WifiConfig, WifiNetwork,
+};
 pub use error::{Error, Result};
 pub use passes::PassManager;
 pub use storage::Storage;

@@ -37,11 +37,16 @@ tracing = { workspace = true }
 config = { workspace = true }
 directories = { workspace = true }
 
+# Validation
+regex = { workspace = true }
+once_cell = { workspace = true }
+
 # OpenAPI schema generation (for shared types)
 utoipa = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
+tempfile = "3.17"
 
 [lints]
 workspace = true

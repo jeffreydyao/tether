@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use tether_core::{BluetoothScanner, PassManager, Storage, TetherConfig};
+use tether_core::{BluetoothScanner, Config, PassManager, Storage};
 use tokio::sync::RwLock;
 
 /// Shared application state.
@@ -12,7 +12,7 @@ pub struct AppState {
 }
 
 struct AppStateInner {
-    pub config: RwLock<TetherConfig>,
+    pub config: RwLock<Config>,
     pub pass_manager: RwLock<PassManager>,
     pub bluetooth: RwLock<Option<BluetoothScanner>>,
 }
@@ -20,9 +20,9 @@ struct AppStateInner {
 impl AppState {
     /// Create new application state.
     pub async fn new() -> anyhow::Result<Self> {
-        let config = TetherConfig::load()?;
+        let config = Config::load_or_default("/etc/tether/config.toml")?;
         let storage = Storage::default()?;
-        let pass_manager = PassManager::new(storage, config.clone());
+        let pass_manager = PassManager::new(storage, config.passes.clone());
 
         Ok(Self {
             inner: Arc::new(AppStateInner {
@@ -34,12 +34,12 @@ impl AppState {
     }
 
     /// Get read access to config.
-    pub async fn config(&self) -> tokio::sync::RwLockReadGuard<'_, TetherConfig> {
+    pub async fn config(&self) -> tokio::sync::RwLockReadGuard<'_, Config> {
         self.inner.config.read().await
     }
 
     /// Get write access to config.
-    pub async fn config_mut(&self) -> tokio::sync::RwLockWriteGuard<'_, TetherConfig> {
+    pub async fn config_mut(&self) -> tokio::sync::RwLockWriteGuard<'_, Config> {
         self.inner.config.write().await
     }
 
