@@ -17,6 +17,7 @@ pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(get_config))
         .route("/bluetooth", put(update_bluetooth))
+        .route("/wifi", put(update_wifi))
         .route("/timezone", put(update_timezone))
         .route("/passes", put(update_passes_per_month))
         .route("/onboarding/complete", put(complete_onboarding))
@@ -163,6 +164,53 @@ pub struct UpdatePassesPerMonthResponse {
     pub message: String,
 }
 
+/// A WiFi network configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[schema(example = json!({
+    "ssid": "HomeNetwork",
+    "password": "supersecret123",
+    "is_primary": true
+}))]
+pub struct WifiNetworkConfig {
+    /// Network SSID (name).
+    #[schema(example = "HomeNetwork")]
+    pub ssid: String,
+
+    /// Network password.
+    #[schema(example = "supersecret123")]
+    pub password: String,
+
+    /// Whether this is the primary network.
+    #[schema(example = true)]
+    pub is_primary: bool,
+}
+
+/// Request to update WiFi networks.
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[schema(example = json!({
+    "networks": [
+        {"ssid": "HomeNetwork", "password": "secret123", "is_primary": true},
+        {"ssid": "BackupNetwork", "password": "backup456", "is_primary": false}
+    ]
+}))]
+pub struct UpdateWifiRequest {
+    /// List of WiFi networks to configure.
+    pub networks: Vec<WifiNetworkConfig>,
+}
+
+/// Response after updating WiFi configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateWifiResponse {
+    /// Whether the update was successful.
+    pub success: bool,
+
+    /// Number of networks configured.
+    pub networks_count: usize,
+
+    /// The SSID of the primary network.
+    pub primary_ssid: Option<String>,
+}
+
 /// Response after completing onboarding.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CompleteOnboardingResponse {
@@ -276,6 +324,112 @@ pub async fn update_bluetooth(
     Ok(Json(UpdateBluetoothResponse {
         success: true,
         bluetooth,
+    }))
+}
+
+/// Update WiFi networks.
+#[utoipa::path(
+    put,
+    path = "/config/wifi",
+    tag = "config",
+    operation_id = "updateWifi",
+    summary = "Update WiFi networks",
+    description = "Updates the list of WiFi networks. Each network needs an SSID, \
+        password, and whether it's the primary network. Exactly one network should \
+        be marked as primary.",
+    request_body = UpdateWifiRequest,
+    responses(
+        (status = 200, description = "WiFi configuration updated", body = UpdateWifiResponse),
+        (status = 400, description = "Invalid WiFi configuration")
+    )
+)]
+pub async fn update_wifi(
+    State(state): State<SharedState>,
+    Json(request): Json<UpdateWifiRequest>,
+) -> ApiResult<Json<UpdateWifiResponse>> {
+    // Validate: at least one network required
+    if request.networks.is_empty() {
+        return Err(ApiError::BadRequest {
+            error_code: "no_networks".to_string(),
+            message: "At least one WiFi network is required".to_string(),
+        });
+    }
+
+    // Validate: exactly one primary network
+    let primary_count = request.networks.iter().filter(|n| n.is_primary).count();
+    if primary_count == 0 {
+        return Err(ApiError::BadRequest {
+            error_code: "no_primary_network".to_string(),
+            message: "Exactly one network must be marked as primary".to_string(),
+        });
+    }
+    if primary_count > 1 {
+        return Err(ApiError::BadRequest {
+            error_code: "multiple_primary_networks".to_string(),
+            message: "Only one network can be marked as primary".to_string(),
+        });
+    }
+
+    // Validate: SSIDs not empty and not too long
+    for (index, network) in request.networks.iter().enumerate() {
+        if network.ssid.trim().is_empty() {
+            return Err(ApiError::BadRequest {
+                error_code: "empty_ssid".to_string(),
+                message: format!("Network {} has an empty SSID", index + 1),
+            });
+        }
+        if network.ssid.len() > 32 {
+            return Err(ApiError::BadRequest {
+                error_code: "ssid_too_long".to_string(),
+                message: format!(
+                    "Network '{}' SSID exceeds 32 character limit",
+                    network.ssid
+                ),
+            });
+        }
+    }
+
+    // Check for duplicate SSIDs
+    let mut seen_ssids = std::collections::HashSet::new();
+    for network in &request.networks {
+        if !seen_ssids.insert(&network.ssid) {
+            return Err(ApiError::BadRequest {
+                error_code: "duplicate_ssid".to_string(),
+                message: format!("Duplicate SSID '{}' found", network.ssid),
+            });
+        }
+    }
+
+    let mut state_guard = state.write().await;
+
+    // Convert to tether-core WifiNetwork type
+    let wifi_networks: Vec<tether_core::WifiNetwork> = request
+        .networks
+        .iter()
+        .map(|n| tether_core::WifiNetwork::new(&n.ssid, &n.password, n.is_primary))
+        .collect();
+
+    // Find primary SSID
+    let primary_ssid = request
+        .networks
+        .iter()
+        .find(|n| n.is_primary)
+        .map(|n| n.ssid.clone());
+
+    // Update config
+    state_guard.config.wifi.networks = wifi_networks;
+
+    // Save config
+    state_guard.save_config().map_err(|e| ApiError::InternalError {
+        error_code: "config_save_failed".to_string(),
+        message: "Failed to save configuration".to_string(),
+        details: Some(e.to_string()),
+    })?;
+
+    Ok(Json(UpdateWifiResponse {
+        success: true,
+        networks_count: request.networks.len(),
+        primary_ssid,
     }))
 }
 

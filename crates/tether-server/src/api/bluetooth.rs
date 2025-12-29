@@ -3,8 +3,7 @@
 //! Provides endpoints for proximity detection and device scanning.
 
 use axum::extract::State;
-use axum::routing::get;
-use axum::{Json, Router};
+use axum::Json;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -12,12 +11,8 @@ use utoipa::ToSchema;
 use crate::api::error::{ApiError, ApiResult};
 use crate::state::SharedState;
 
-/// Creates the bluetooth router with all endpoints.
-pub fn router() -> Router<SharedState> {
-    Router::new()
-        .route("/proximity", get(check_proximity))
-        .route("/scan", get(scan_devices))
-}
+// Note: Routes are now exposed directly in api.rs at /api/proximity and /api/devices
+// This module still provides the handlers and types.
 
 // ============================================================================
 // Request/Response Types
@@ -119,12 +114,14 @@ const DEFAULT_SCAN_TIMEOUT_SECS: u64 = 10;
 /// device and comparing its RSSI signal strength against the threshold.
 #[utoipa::path(
     get,
-    path = "/bluetooth/proximity",
-    tag = "bluetooth",
+    path = "/proximity",
+    tag = "proximity",
     operation_id = "checkProximity",
     summary = "Check if configured device is nearby",
     description = "Performs a Bluetooth scan to determine if the configured \
-        device is within the proximity threshold.",
+        device is within the proximity threshold. This is the primary endpoint \
+        for checking accountability - if the device is NOT nearby, the user is \
+        successfully keeping their phone away.",
     responses(
         (status = 200, description = "Proximity check completed", body = ProximityResponse),
         (status = 424, description = "Bluetooth device not configured"),
@@ -195,8 +192,8 @@ pub async fn check_proximity(
 /// Used during onboarding to help users select their phone.
 #[utoipa::path(
     get,
-    path = "/bluetooth/scan",
-    tag = "bluetooth",
+    path = "/devices",
+    tag = "devices",
     operation_id = "scanDevices",
     summary = "Scan for Bluetooth devices",
     description = "Performs a Bluetooth scan and returns all discovered devices. \

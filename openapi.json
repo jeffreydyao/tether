@@ -20,59 +20,6 @@
     }
   ],
   "paths": {
-    "/bluetooth/proximity": {
-      "get": {
-        "tags": [
-          "bluetooth"
-        ],
-        "summary": "Check if configured device is nearby",
-        "description": "Performs a Bluetooth scan to determine if the configured device is within the proximity threshold.",
-        "operationId": "checkProximity",
-        "responses": {
-          "200": {
-            "description": "Proximity check completed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProximityResponse"
-                }
-              }
-            }
-          },
-          "424": {
-            "description": "Bluetooth device not configured"
-          },
-          "503": {
-            "description": "Bluetooth service unavailable"
-          }
-        }
-      }
-    },
-    "/bluetooth/scan": {
-      "get": {
-        "tags": [
-          "bluetooth"
-        ],
-        "summary": "Scan for Bluetooth devices",
-        "description": "Performs a Bluetooth scan and returns all discovered devices. Use this during onboarding to find the user's phone.",
-        "operationId": "scanDevices",
-        "responses": {
-          "200": {
-            "description": "Scan completed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ScanDevicesResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Bluetooth service unavailable"
-          }
-        }
-      }
-    },
     "/config": {
       "get": {
         "tags": [
@@ -228,6 +175,66 @@
         }
       }
     },
+    "/config/wifi": {
+      "put": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Update WiFi networks",
+        "description": "Updates the list of WiFi networks. Each network needs an SSID, password, and whether it's the primary network. Exactly one network should be marked as primary.",
+        "operationId": "updateWifi",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWifiRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "WiFi configuration updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateWifiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid WiFi configuration"
+          }
+        }
+      }
+    },
+    "/devices": {
+      "get": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Scan for Bluetooth devices",
+        "description": "Performs a Bluetooth scan and returns all discovered devices. Use this during onboarding to find the user's phone.",
+        "operationId": "scanDevices",
+        "responses": {
+          "200": {
+            "description": "Scan completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanDevicesResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Bluetooth service unavailable"
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -346,6 +353,119 @@
           },
           "409": {
             "description": "No passes remaining"
+          }
+        }
+      }
+    },
+    "/proximity": {
+      "get": {
+        "tags": [
+          "proximity"
+        ],
+        "summary": "Check if configured device is nearby",
+        "description": "Performs a Bluetooth scan to determine if the configured device is within the proximity threshold. This is the primary endpoint for checking accountability - if the device is NOT nearby, the user is successfully keeping their phone away.",
+        "operationId": "checkProximity",
+        "responses": {
+          "200": {
+            "description": "Proximity check completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProximityResponse"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Bluetooth device not configured"
+          },
+          "503": {
+            "description": "Bluetooth service unavailable"
+          }
+        }
+      }
+    },
+    "/system/restart": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Request system restart",
+        "description": "Initiates a system restart. The restart can be delayed by up to 60 seconds. This is useful for applying configuration changes that require a restart.",
+        "operationId": "restartSystem",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Restart accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestartResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid delay value"
+          },
+          "503": {
+            "description": "Restart not available"
+          }
+        }
+      }
+    },
+    "/system/status": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get system status",
+        "description": "Returns the current system status including version, uptime, and component availability.",
+        "operationId": "getSystemStatus",
+        "responses": {
+          "200": {
+            "description": "System status retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/system/ticket": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get dumbpipe ticket",
+        "description": "Returns the dumbpipe ticket for establishing remote P2P connections via iroh. This ticket is used by the MCP server to connect to this tether instance.",
+        "operationId": "getDumbpipeTicket",
+        "responses": {
+          "200": {
+            "description": "Ticket retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DumbpipeTicketResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dumbpipe not available"
           }
         }
       }
@@ -487,6 +607,56 @@
           "address": "AA:BB:CC:DD:EE:FF",
           "name": "iPhone 15 Pro",
           "rssi_dbm": -45
+        }
+      },
+      "DumbpipeTicketResponse": {
+        "type": "object",
+        "description": "Dumbpipe ticket response.",
+        "required": [
+          "available"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether dumbpipe is available.",
+            "example": true
+          },
+          "expires_at_utc": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the ticket expires (if applicable).",
+            "example": "2025-01-15T04:30:00Z"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Message if not available."
+          },
+          "node_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The node ID of this tether instance.",
+            "example": "n0abc123..."
+          },
+          "ticket": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The dumbpipe ticket for remote access.\nThis is a base32-encoded iroh ticket.",
+            "example": "blobfd23abc..."
+          }
+        },
+        "example": {
+          "expires_at_utc": "2025-01-15T04:30:00Z",
+          "node_id": "n0abc123...",
+          "ticket": "blobfd23abc..."
         }
       },
       "ErrorResponse": {
@@ -734,6 +904,59 @@
           "threshold_dbm": -60
         }
       },
+      "RestartRequest": {
+        "type": "object",
+        "description": "System restart request.",
+        "properties": {
+          "delay_secs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Delay before restart in seconds (0-60).",
+            "example": 5,
+            "maximum": 60,
+            "minimum": 0
+          }
+        },
+        "example": {
+          "delay_secs": 5
+        }
+      },
+      "RestartResponse": {
+        "type": "object",
+        "description": "System restart response.",
+        "required": [
+          "accepted",
+          "message",
+          "delay_secs"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "boolean",
+            "description": "Whether the restart request was accepted.",
+            "example": true
+          },
+          "delay_secs": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Delay before restart.",
+            "example": 5,
+            "minimum": 0
+          },
+          "message": {
+            "type": "string",
+            "description": "Message about the restart.",
+            "example": "System will restart in 5 seconds"
+          }
+        },
+        "example": {
+          "accepted": true,
+          "delay_secs": 5,
+          "message": "System will restart in 5 seconds"
+        }
+      },
       "ScanDevicesResponse": {
         "type": "object",
         "description": "Device scan response.",
@@ -773,6 +996,53 @@
           ],
           "scan_duration_secs": 5,
           "scanned_at_utc": "2025-01-15T03:30:00Z"
+        }
+      },
+      "SystemStatusResponse": {
+        "type": "object",
+        "description": "System status response.",
+        "required": [
+          "version",
+          "uptime_secs",
+          "bluetooth_available",
+          "config_loaded",
+          "onboarding_complete"
+        ],
+        "properties": {
+          "bluetooth_available": {
+            "type": "boolean",
+            "description": "Whether Bluetooth is available.",
+            "example": true
+          },
+          "config_loaded": {
+            "type": "boolean",
+            "description": "Whether configuration is loaded.",
+            "example": true
+          },
+          "onboarding_complete": {
+            "type": "boolean",
+            "description": "Whether onboarding is complete.",
+            "example": true
+          },
+          "uptime_secs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Server uptime in seconds.",
+            "example": 3600,
+            "minimum": 0
+          },
+          "version": {
+            "type": "string",
+            "description": "Server version.",
+            "example": "0.1.0"
+          }
+        },
+        "example": {
+          "bluetooth_available": true,
+          "config_loaded": true,
+          "onboarding_complete": true,
+          "uptime_secs": 3600,
+          "version": "0.1.0"
         }
       },
       "UpdateBluetoothRequest": {
@@ -915,6 +1185,62 @@
           }
         }
       },
+      "UpdateWifiRequest": {
+        "type": "object",
+        "description": "Request to update WiFi networks.",
+        "required": [
+          "networks"
+        ],
+        "properties": {
+          "networks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WifiNetworkConfig"
+            },
+            "description": "List of WiFi networks to configure."
+          }
+        },
+        "example": {
+          "networks": [
+            {
+              "is_primary": true,
+              "password": "secret123",
+              "ssid": "HomeNetwork"
+            },
+            {
+              "is_primary": false,
+              "password": "backup456",
+              "ssid": "BackupNetwork"
+            }
+          ]
+        }
+      },
+      "UpdateWifiResponse": {
+        "type": "object",
+        "description": "Response after updating WiFi configuration.",
+        "required": [
+          "success",
+          "networks_count"
+        ],
+        "properties": {
+          "networks_count": {
+            "type": "integer",
+            "description": "Number of networks configured.",
+            "minimum": 0
+          },
+          "primary_ssid": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The SSID of the primary network."
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether the update was successful."
+          }
+        }
+      },
       "UsePassRequest": {
         "type": "object",
         "description": "Request body for using a pass.",
@@ -973,6 +1299,37 @@
           "success": true,
           "used_at_utc": "2025-01-15T03:30:00Z"
         }
+      },
+      "WifiNetworkConfig": {
+        "type": "object",
+        "description": "A WiFi network configuration.",
+        "required": [
+          "ssid",
+          "password",
+          "is_primary"
+        ],
+        "properties": {
+          "is_primary": {
+            "type": "boolean",
+            "description": "Whether this is the primary network.",
+            "example": true
+          },
+          "password": {
+            "type": "string",
+            "description": "Network password.",
+            "example": "supersecret123"
+          },
+          "ssid": {
+            "type": "string",
+            "description": "Network SSID (name).",
+            "example": "HomeNetwork"
+          }
+        },
+        "example": {
+          "is_primary": true,
+          "password": "supersecret123",
+          "ssid": "HomeNetwork"
+        }
       }
     }
   },
@@ -980,6 +1337,10 @@
     {
       "name": "system",
       "description": "Health checks and system status"
+    },
+    {
+      "name": "proximity",
+      "description": "Phone proximity detection via Bluetooth"
     },
     {
       "name": "passes",
@@ -990,8 +1351,8 @@
       "description": "System configuration including Bluetooth device, timezone, and pass settings"
     },
     {
-      "name": "bluetooth",
-      "description": "Bluetooth proximity detection and device scanning"
+      "name": "devices",
+      "description": "Bluetooth device scanning for onboarding"
     }
   ]
 }

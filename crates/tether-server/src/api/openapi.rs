@@ -6,18 +6,16 @@
 //!
 //! Descriptions are written to be understood by both human developers and AI agents.
 
-use axum::routing::get;
-use axum::{Json, Router};
+use axum::Json;
 use utoipa::OpenApi;
-
-use crate::state::SharedState;
 
 // Import all the handler modules to reference their types
 use super::bluetooth::{DiscoveredDevice, ProximityResponse, ScanDevicesResponse};
 use super::config::{
     BluetoothConfigResponse, CompleteOnboardingResponse, ConfigResponse, UpdateBluetoothRequest,
     UpdateBluetoothResponse, UpdatePassesPerMonthRequest, UpdatePassesPerMonthResponse,
-    UpdateTimezoneRequest, UpdateTimezoneResponse,
+    UpdateTimezoneRequest, UpdateTimezoneResponse, UpdateWifiRequest, UpdateWifiResponse,
+    WifiNetworkConfig,
 };
 use super::error::ErrorResponse;
 use super::health::HealthResponse;
@@ -25,20 +23,21 @@ use super::passes::{
     PassHistoryEntry, PassHistoryResponse, PassesResponse, UsePassRequest,
     UsePassResponse,
 };
-
-/// Creates the OpenAPI documentation router.
-pub fn router() -> Router<SharedState> {
-    Router::new()
-        .route("/", get(get_openapi_spec))
-        .route("/openapi.json", get(get_openapi_spec))
-}
+use super::system::{
+    DumbpipeTicketResponse, RestartRequest, RestartResponse, SystemStatusResponse,
+};
 
 /// Serve the OpenAPI specification as JSON.
+///
+/// This endpoint is available at `/api/openapi.json` and returns the complete
+/// OpenAPI 3.0 specification for the tether API.
 pub async fn get_openapi_spec() -> Json<utoipa::openapi::OpenApi> {
     Json(ApiDoc::openapi())
 }
 
 /// Returns the OpenAPI specification as a string (for writing to file).
+/// Used by the gen-openapi binary.
+#[allow(dead_code)]
 pub fn get_openapi_json() -> String {
     ApiDoc::openapi()
         .to_pretty_json()
@@ -90,6 +89,10 @@ If you're accessing this API via MCP tools:
             description = "Health checks and system status"
         ),
         (
+            name = "proximity",
+            description = "Phone proximity detection via Bluetooth"
+        ),
+        (
             name = "passes",
             description = "Emergency pass management - allows keeping phone nearby for legitimate reasons"
         ),
@@ -98,13 +101,15 @@ If you're accessing this API via MCP tools:
             description = "System configuration including Bluetooth device, timezone, and pass settings"
         ),
         (
-            name = "bluetooth",
-            description = "Bluetooth proximity detection and device scanning"
+            name = "devices",
+            description = "Bluetooth device scanning for onboarding"
         )
     ),
     paths(
         // Health endpoints
         super::health::health_check,
+        // Proximity endpoints
+        super::bluetooth::check_proximity,
         // Pass endpoints
         super::passes::get_passes,
         super::passes::get_pass_history,
@@ -112,11 +117,15 @@ If you're accessing this API via MCP tools:
         // Config endpoints
         super::config::get_config,
         super::config::update_bluetooth,
+        super::config::update_wifi,
         super::config::update_timezone,
         super::config::update_passes_per_month,
         super::config::complete_onboarding,
-        // Bluetooth endpoints
-        super::bluetooth::check_proximity,
+        // System endpoints
+        super::system::get_status,
+        super::system::get_ticket,
+        super::system::restart,
+        // Device endpoints
         super::bluetooth::scan_devices,
     ),
     components(
@@ -136,11 +145,19 @@ If you're accessing this API via MCP tools:
             BluetoothConfigResponse,
             UpdateBluetoothRequest,
             UpdateBluetoothResponse,
+            WifiNetworkConfig,
+            UpdateWifiRequest,
+            UpdateWifiResponse,
             UpdateTimezoneRequest,
             UpdateTimezoneResponse,
             UpdatePassesPerMonthRequest,
             UpdatePassesPerMonthResponse,
             CompleteOnboardingResponse,
+            // System types
+            SystemStatusResponse,
+            DumbpipeTicketResponse,
+            RestartRequest,
+            RestartResponse,
             // Bluetooth types
             ProximityResponse,
             DiscoveredDevice,

@@ -47,6 +47,9 @@ pub struct AppState {
     pub config_path: PathBuf,
 
     /// Path to the passes data file.
+    /// Note: PassManager handles its own persistence, but this is kept
+    /// for potential future use (e.g., backup operations).
+    #[allow(dead_code)]
     pub passes_path: PathBuf,
 }
 
@@ -95,6 +98,8 @@ impl AppState {
 }
 
 /// Extension trait for SharedState to provide ergonomic access patterns.
+/// These methods are currently used in tests and available for future use.
+#[allow(dead_code)]
 pub trait SharedStateExt {
     /// Acquires a read lock and returns a clone of the config.
     fn get_config(&self) -> impl std::future::Future<Output = Config> + Send;

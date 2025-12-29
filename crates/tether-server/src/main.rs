@@ -167,18 +167,14 @@ fn resolve_data_paths(is_production: bool) -> (PathBuf, PathBuf) {
 
 /// Initialize the Bluetooth scanner if available.
 ///
-/// Returns `None` if Bluetooth is not configured or not available.
+/// Returns `None` if Bluetooth is not available.
+/// The scanner is initialized without configuration - the BtConfig is
+/// passed to check_proximity() and discover_devices() calls instead.
 #[cfg(feature = "bluetooth")]
-async fn init_bluetooth(config: &Config) -> Option<tether_core::BluetoothScanner> {
-    use tether_core::{BluetoothScanner, BtConfig};
+async fn init_bluetooth(_config: &Config) -> Option<tether_core::BluetoothScanner> {
+    use tether_core::BluetoothScanner;
 
-    let bt_config = BtConfig {
-        target_address: config.bluetooth.target_address.clone(),
-        rssi_threshold: config.bluetooth.rssi_threshold.unwrap_or(-70),
-        scan_timeout_secs: config.bluetooth.scan_timeout_secs.unwrap_or(10),
-    };
-
-    match BluetoothScanner::new(bt_config).await {
+    match BluetoothScanner::new().await {
         Ok(scanner) => {
             info!("Bluetooth scanner initialized");
             Some(scanner)
