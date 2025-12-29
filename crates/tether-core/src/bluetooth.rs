@@ -34,6 +34,7 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use thiserror::Error;
+#[allow(unused_imports)]
 use tracing::{debug, error, info, instrument, warn};
 use utoipa::ToSchema;
 

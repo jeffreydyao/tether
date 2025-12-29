@@ -11,9 +11,14 @@ license.workspace = true
 name = "tether-server"
 path = "src/main.rs"
 
+[features]
+default = ["bluetooth"]
+bluetooth = ["tether-core/bluetooth"]
+mock-bluetooth = ["tether-core/mock-bluetooth"]
+
 [dependencies]
 # Internal crates
-tether-core = { workspace = true }
+tether-core = { workspace = true, default-features = false }
 
 # Async runtime
 tokio = { workspace = true }
@@ -54,6 +59,7 @@ directories = { workspace = true }
 [dev-dependencies]
 axum-test = "16.4"
 tokio-test = "0.4"
+tempfile = { workspace = true }
 
 [lints]
 workspace = true

@@ -55,7 +55,9 @@ pub enum ConfigError {
     /// - The path is invalid
     #[error("Failed to read configuration file '{path}': {source}")]
     ReadError {
+        /// Path to the file that could not be read.
         path: String,
+        /// The underlying I/O error.
         #[source]
         source: std::io::Error,
     },
@@ -68,7 +70,9 @@ pub enum ConfigError {
     /// - The disk is full
     #[error("Failed to write configuration file '{path}': {source}")]
     WriteError {
+        /// Path to the file that could not be written.
         path: String,
+        /// The underlying I/O error.
         #[source]
         source: std::io::Error,
     },
@@ -98,7 +102,12 @@ pub enum ConfigError {
     /// The `field` indicates which configuration key is invalid, and
     /// `message` describes what is wrong with the value.
     #[error("Invalid configuration value for '{field}': {message}")]
-    ValidationError { field: String, message: String },
+    ValidationError {
+        /// The configuration field that failed validation.
+        field: String,
+        /// Description of what is wrong with the value.
+        message: String,
+    },
 
     /// Multiple validation errors occurred.
     ///
