@@ -41,7 +41,7 @@ pub use config::{
     is_valid_mac_address, is_valid_timezone_format, BluetoothConfig, Config, ConfigError,
     ConfigResult, PassesConfig, SystemConfig, WifiConfig, WifiNetwork,
 };
-pub use error::{Error, Result};
+pub use error::{Error, Result, TetherError};
 pub use passes::{
     current_month_string, is_valid_month_string, PassData, PassEntry, PassError, PassManager,
     PassResult, MAX_REASON_LENGTH,
