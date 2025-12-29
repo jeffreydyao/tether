@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { ProximityCard, PassesCard, PassHistoryList, DumbpipeCard } from "@/components/dashboard";
 
 type TabId = "status" | "passes" | "settings";
 
@@ -9,11 +10,10 @@ function StatusTab(): ReactNode {
   return (
     <div className="space-y-4 p-4">
       <h1 className="text-2xl font-bold">Status</h1>
-      <p className="text-muted-foreground">
-        Phone proximity and connection status will appear here.
-      </p>
-      <div className="rounded-lg border bg-card p-6 text-center">
-        <p className="text-sm text-muted-foreground">Dashboard components coming in Phase 2.4</p>
+      <p className="text-muted-foreground">Phone proximity and connection status.</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <ProximityCard className="md:col-span-1" />
+        <DumbpipeCard className="md:col-span-1" />
       </div>
     </div>
   );
@@ -24,8 +24,9 @@ function PassesTab(): ReactNode {
     <div className="space-y-4 p-4">
       <h1 className="text-2xl font-bold">Passes</h1>
       <p className="text-muted-foreground">Manage your monthly emergency passes.</p>
-      <div className="rounded-lg border bg-card p-6 text-center">
-        <p className="text-sm text-muted-foreground">Pass management coming in Phase 2.4</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <PassesCard className="md:col-span-1" />
+        <PassHistoryList className="md:col-span-2" maxEntries={10} />
       </div>
     </div>
   );
