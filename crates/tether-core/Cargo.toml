@@ -1,0 +1,47 @@
+[package]
+name = "tether-core"
+description = "Core business logic for tether - phone proximity tracking for Raspberry Pi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+
+# Bluetooth
+btleplug = { workspace = true }
+
+# Date/Time
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+
+# Identifiers
+uuid = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Configuration
+config = { workspace = true }
+directories = { workspace = true }
+
+# OpenAPI schema generation (for shared types)
+utoipa = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[lints]
+workspace = true

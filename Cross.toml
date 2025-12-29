@@ -1,0 +1,51 @@
+# Cross.toml - Configuration for cross-rs
+# Used for cross-compiling tether to Raspberry Pi Zero 2 W (32-bit armhf)
+#
+# Usage:
+#   cross build --release --target armv7-unknown-linux-gnueabihf
+#
+# Prerequisites:
+#   cargo install cross --git https://github.com/cross-rs/cross
+#   Docker or Podman must be running
+
+[build]
+# Build configuration - using 32-bit for Pi Zero 2 W (512MB RAM)
+default-target = "armv7-unknown-linux-gnueabihf"
+
+[build.env]
+# Pass through environment variables to the container
+passthrough = [
+    "RUST_LOG",
+    "RUST_BACKTRACE",
+]
+
+[target.armv7-unknown-linux-gnueabihf]
+# Primary target: 32-bit ARM for Raspberry Pi Zero 2 W
+image = "ghcr.io/cross-rs/armv7-unknown-linux-gnueabihf:0.2.5"
+
+# Pre-build script (install additional packages if needed)
+# pre-build = [
+#     "apt-get update && apt-get install -y libbluetooth-dev libdbus-1-dev"
+# ]
+
+# Environment variables for this target
+[target.armv7-unknown-linux-gnueabihf.env]
+passthrough = [
+    "RUST_LOG",
+    "RUST_BACKTRACE",
+]
+
+[target.aarch64-unknown-linux-gnu]
+# Alternative: 64-bit ARM target (not recommended for Pi Zero 2 W)
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:0.2.5"
+
+[target.aarch64-unknown-linux-gnu.env]
+passthrough = [
+    "RUST_LOG",
+    "RUST_BACKTRACE",
+]
+
+# Custom image configuration (uncomment if you need Bluetooth dev libraries)
+# [target.armv7-unknown-linux-gnueabihf]
+# dockerfile = "./docker/Dockerfile.armv7"
+# context = "./docker"

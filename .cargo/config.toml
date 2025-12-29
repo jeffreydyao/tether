@@ -1,0 +1,50 @@
+# Cargo configuration for tether
+# Optimized for Raspberry Pi Zero 2 W (32-bit armhf) cross-compilation
+# Using 32-bit because Pi Zero 2 W has only 512MB RAM
+
+[build]
+# Use sccache if available for faster rebuilds
+# rustc-wrapper = "sccache"
+
+[target.armv7-unknown-linux-gnueabihf]
+# Primary target: 32-bit ARM for Raspberry Pi Zero 2 W
+# Using armhf for better memory efficiency on 512MB RAM device
+linker = "arm-linux-gnueabihf-gcc"
+
+# Runner for cross-compiled binaries (useful for testing with QEMU)
+# runner = "qemu-arm"
+
+# Optimization flags for Raspberry Pi Zero 2 W (Cortex-A53 in 32-bit mode)
+rustflags = [
+    "-C", "target-cpu=cortex-a53",
+    "-C", "link-arg=-Wl,--as-needed",
+]
+
+[target.aarch64-unknown-linux-gnu]
+# Alternative: 64-bit ARM target (not recommended for Pi Zero 2 W due to RAM constraints)
+linker = "aarch64-linux-gnu-gcc"
+rustflags = [
+    "-C", "target-cpu=cortex-a53",
+    "-C", "link-arg=-Wl,--as-needed",
+]
+
+[alias]
+# Convenience aliases
+br = "build --release"
+rr = "run --release"
+
+# Cross-compilation aliases
+build-pi = "build --release --target armv7-unknown-linux-gnueabihf"
+build-pi64 = "build --release --target aarch64-unknown-linux-gnu"
+
+[env]
+# Environment variables for builds
+RUST_BACKTRACE = "1"
+
+[net]
+# Retry configuration for crates.io
+retry = 3
+git-fetch-with-cli = true
+
+[registries.crates-io]
+protocol = "sparse"
