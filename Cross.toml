@@ -3,6 +3,8 @@
 #
 # Usage:
 #   cross build --release --target armv7-unknown-linux-gnueabihf
+#   # Or use the build script:
+#   ./scripts/build-pi.sh
 #
 # Prerequisites:
 #   cargo install cross --git https://github.com/cross-rs/cross
@@ -17,35 +19,47 @@ default-target = "armv7-unknown-linux-gnueabihf"
 passthrough = [
     "RUST_LOG",
     "RUST_BACKTRACE",
+    "CARGO_TERM_COLOR",
 ]
 
 [target.armv7-unknown-linux-gnueabihf]
 # Primary target: 32-bit ARM for Raspberry Pi Zero 2 W
-image = "ghcr.io/cross-rs/armv7-unknown-linux-gnueabihf:0.2.5"
 
-# Pre-build script (install additional packages if needed)
-# pre-build = [
-#     "apt-get update && apt-get install -y libbluetooth-dev libdbus-1-dev"
-# ]
+# CRITICAL: Install ARM32 development libraries before building
+# CROSS_DEB_ARCH automatically evaluates to "armhf" for this target
+# libdbus-1-dev is REQUIRED for the bluer crate which depends on dbus-rs
+pre-build = [
+    # Add armhf architecture support
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    # Update package lists
+    "apt-get update",
+    # Install D-Bus development headers for armhf (required by bluer/dbus-rs)
+    "apt-get install --assume-yes libdbus-1-dev:$CROSS_DEB_ARCH",
+    # Install pkg-config for armhf to help find the libraries
+    "apt-get install --assume-yes pkg-config",
+]
 
 # Environment variables for this target
 [target.armv7-unknown-linux-gnueabihf.env]
 passthrough = [
     "RUST_LOG",
     "RUST_BACKTRACE",
+    "PKG_CONFIG_ALLOW_CROSS=1",
+    "PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig",
 ]
 
 [target.aarch64-unknown-linux-gnu]
-# Alternative: 64-bit ARM target (not recommended for Pi Zero 2 W)
-image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:0.2.5"
+# Alternative: 64-bit ARM target (not recommended for Pi Zero 2 W due to RAM)
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update",
+    "apt-get install --assume-yes libdbus-1-dev:$CROSS_DEB_ARCH",
+    "apt-get install --assume-yes pkg-config",
+]
 
 [target.aarch64-unknown-linux-gnu.env]
 passthrough = [
     "RUST_LOG",
     "RUST_BACKTRACE",
+    "PKG_CONFIG_ALLOW_CROSS=1",
 ]
-
-# Custom image configuration (uncomment if you need Bluetooth dev libraries)
-# [target.armv7-unknown-linux-gnueabihf]
-# dockerfile = "./docker/Dockerfile.armv7"
-# context = "./docker"

@@ -12,12 +12,15 @@
 linker = "arm-linux-gnueabihf-gcc"
 
 # Runner for cross-compiled binaries (useful for testing with QEMU)
-# runner = "qemu-arm"
+runner = "qemu-arm"
 
 # Optimization flags for Raspberry Pi Zero 2 W (Cortex-A53 in 32-bit mode)
+# Include library paths for dbus (required by bluer crate)
 rustflags = [
     "-C", "target-cpu=cortex-a53",
     "-C", "link-arg=-Wl,--as-needed",
+    "-L", "/usr/arm-linux-gnueabihf/lib",
+    "-L", "/usr/lib/arm-linux-gnueabihf",
 ]
 
 [target.aarch64-unknown-linux-gnu]
@@ -26,6 +29,8 @@ linker = "aarch64-linux-gnu-gcc"
 rustflags = [
     "-C", "target-cpu=cortex-a53",
     "-C", "link-arg=-Wl,--as-needed",
+    "-L", "/usr/aarch64-linux-gnu/lib",
+    "-L", "/usr/lib/aarch64-linux-gnu",
 ]
 
 [alias]
