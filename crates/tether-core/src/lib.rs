@@ -31,7 +31,12 @@ pub mod storage;
 pub mod types;
 
 // Re-export primary types for convenience
-pub use bluetooth::BluetoothScanner;
+#[cfg(any(feature = "mock-bluetooth", not(feature = "bluetooth")))]
+pub use bluetooth::MockDevice;
+pub use bluetooth::{
+    BluetoothConfig as BtConfig, BluetoothDevice, BluetoothError, BluetoothResult,
+    BluetoothScanner, ProximityResult,
+};
 pub use config::{
     is_valid_mac_address, is_valid_timezone_format, BluetoothConfig, Config, ConfigError,
     ConfigResult, PassesConfig, SystemConfig, WifiConfig, WifiNetwork,
@@ -42,4 +47,4 @@ pub use passes::{
     PassResult, MAX_REASON_LENGTH,
 };
 pub use storage::{default_data_dir, default_passes_path};
-pub use types::*;
+pub use types::HealthResponse;

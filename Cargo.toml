@@ -32,8 +32,7 @@ utoipa = { version = "5.3", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
 
-# Bluetooth
-btleplug = { version = "0.11", features = ["serde"] }
+# Bluetooth (bluer is used directly in tether-core, not as workspace dependency)
 
 # Date/Time
 chrono = { version = "0.4", features = ["serde"] }
