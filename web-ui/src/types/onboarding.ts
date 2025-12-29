@@ -23,6 +23,12 @@ export interface WifiConfig {
   isPrimary: boolean;
 }
 
+export interface WifiConfigResponse {
+  success: boolean;
+  error?: string;
+  newIpAddress?: string;
+}
+
 export interface TimezoneInfo {
   id: string;
   displayName: string;
@@ -79,16 +85,23 @@ export interface WizardStepDefinition {
 }
 
 export const COMMON_TIMEZONES: TimezoneInfo[] = [
-  { id: "America/New_York", displayName: "Eastern Time (US)", utcOffset: "UTC-05:00" },
-  { id: "America/Chicago", displayName: "Central Time (US)", utcOffset: "UTC-06:00" },
-  { id: "America/Denver", displayName: "Mountain Time (US)", utcOffset: "UTC-07:00" },
-  { id: "America/Los_Angeles", displayName: "Pacific Time (US)", utcOffset: "UTC-08:00" },
+  { id: "America/New_York", displayName: "Eastern Time (US & Canada)", utcOffset: "UTC-05:00" },
+  { id: "America/Chicago", displayName: "Central Time (US & Canada)", utcOffset: "UTC-06:00" },
+  { id: "America/Denver", displayName: "Mountain Time (US & Canada)", utcOffset: "UTC-07:00" },
+  { id: "America/Los_Angeles", displayName: "Pacific Time (US & Canada)", utcOffset: "UTC-08:00" },
   { id: "America/Anchorage", displayName: "Alaska", utcOffset: "UTC-09:00" },
   { id: "Pacific/Honolulu", displayName: "Hawaii", utcOffset: "UTC-10:00" },
   { id: "Europe/London", displayName: "London", utcOffset: "UTC+00:00" },
-  { id: "Europe/Paris", displayName: "Paris, Berlin", utcOffset: "UTC+01:00" },
-  { id: "Asia/Tokyo", displayName: "Tokyo", utcOffset: "UTC+09:00" },
-  { id: "Australia/Sydney", displayName: "Sydney", utcOffset: "UTC+10:00" },
+  { id: "Europe/Paris", displayName: "Paris, Berlin, Rome", utcOffset: "UTC+01:00" },
+  { id: "Europe/Helsinki", displayName: "Helsinki, Kyiv, Riga", utcOffset: "UTC+02:00" },
+  { id: "Europe/Moscow", displayName: "Moscow, St. Petersburg", utcOffset: "UTC+03:00" },
+  { id: "Asia/Dubai", displayName: "Dubai, Abu Dhabi", utcOffset: "UTC+04:00" },
+  { id: "Asia/Kolkata", displayName: "Mumbai, Kolkata, New Delhi", utcOffset: "UTC+05:30" },
+  { id: "Asia/Bangkok", displayName: "Bangkok, Hanoi, Jakarta", utcOffset: "UTC+07:00" },
+  { id: "Asia/Shanghai", displayName: "Beijing, Shanghai, Hong Kong", utcOffset: "UTC+08:00" },
+  { id: "Asia/Tokyo", displayName: "Tokyo, Seoul", utcOffset: "UTC+09:00" },
+  { id: "Australia/Sydney", displayName: "Sydney, Melbourne", utcOffset: "UTC+10:00" },
+  { id: "Pacific/Auckland", displayName: "Auckland, Wellington", utcOffset: "UTC+12:00" },
 ];
 
 export const DEFAULT_WIZARD_DATA: WizardStepData = {
