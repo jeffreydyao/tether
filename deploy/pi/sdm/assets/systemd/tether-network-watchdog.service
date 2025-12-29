@@ -1,0 +1,93 @@
+# tether-network-watchdog.service
+#
+# Monitors network connectivity and manages WiFi failover.
+#
+# This service implements the following logic:
+# 1. Periodically checks if current WiFi has internet connectivity
+# 2. If no internet, tries other configured WiFi networks
+# 3. If all networks fail, activates the setup AP for reconfiguration
+# 4. When a network becomes available, deactivates the AP
+#
+# The watchdog runs as a simple loop with configurable check intervals.
+# It's designed to be lightweight and resilient.
+
+[Unit]
+Description=Tether Network Connectivity Watchdog
+Documentation=https://github.com/yourrepo/tether
+After=NetworkManager.service network-online.target
+Wants=NetworkManager.service
+
+[Service]
+# Service type: simple (runs in foreground with a loop)
+Type=simple
+
+# Run as root for NetworkManager control
+User=root
+Group=root
+
+# Working directory
+WorkingDirectory=/opt/tether
+
+# The watchdog script
+ExecStart=/opt/tether/scripts/tether-network-watchdog.sh
+
+# Restart policy - always restart for continuous monitoring
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+# Environment variables
+Environment=LOG_LEVEL=1
+Environment=CHECK_INTERVAL=30
+Environment=CONNECTIVITY_CHECK_URL=http://connectivitycheck.gstatic.com/generate_204
+
+# Logging
+StandardOutput=append:/opt/tether/logs/network-watchdog.log
+StandardError=append:/opt/tether/logs/network-watchdog.log
+SyslogIdentifier=tether-network-watchdog
+
+# Security hardening (less restrictive due to NetworkManager control)
+NoNewPrivileges=false
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectClock=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallArchitectures=native
+
+# Allow network operations
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+
+# Writable paths
+ReadWritePaths=/opt/tether/logs /opt/tether/data /run
+ReadOnlyPaths=/opt/tether/config
+
+# Resource limits - watchdog is very lightweight
+LimitNOFILE=256
+MemoryMax=32M
+MemoryHigh=24M
+CPUQuota=20%
+
+# Timeouts
+TimeoutStartSec=30
+TimeoutStopSec=10
+KillSignal=SIGTERM
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

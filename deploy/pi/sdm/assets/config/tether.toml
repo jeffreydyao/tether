@@ -1,0 +1,82 @@
+# Tether Configuration
+# This file is created during first boot and modified via the web UI
+#
+# Location on device: /opt/tether/config/tether.toml
+# Permissions: root:tether 640 (only root can write, tether user can read)
+
+# Onboarding status (set to true when setup is complete)
+onboarded = false
+
+[bluetooth]
+# Target device MAC address (set during onboarding)
+# target_device_mac = "AA:BB:CC:DD:EE:FF"
+
+# Friendly name for the target device
+# target_device_name = "iPhone"
+
+# RSSI threshold for "present" detection
+# Values closer to 0 are stronger signals
+# Typical values: -40 (very close) to -90 (far/weak)
+rssi_threshold = -70
+
+# Scan interval in seconds
+scan_interval = 30
+
+[wifi]
+# Primary network SSID (highest priority for reconnection)
+# primary_network = "MyHomeNetwork"
+
+# List of configured WiFi networks
+# Networks are tried in order if primary fails
+# [[wifi.networks]]
+# ssid = "MyHomeNetwork"
+# password = "mysecretpassword"
+
+# [[wifi.networks]]
+# ssid = "BackupNetwork"
+# password = "otherpassword"
+
+[passes]
+# Number of free passes allowed per month
+monthly_limit = 3
+
+# Reset day of month (1-28)
+reset_day = 1
+
+[server]
+# Address to bind the HTTP server
+# 0.0.0.0 = all interfaces (needed for LAN access)
+# 127.0.0.1 = localhost only
+listen_address = "0.0.0.0"
+
+# HTTP server port
+port = 3000
+
+# Path to static web UI files
+web_ui_path = "/opt/tether/web-ui"
+
+[timezone]
+# Timezone for pass expiration calculations
+# Uses IANA timezone database names
+# Example: "America/Los_Angeles", "America/New_York", "Europe/London"
+# If not set, uses system timezone
+# tz = "UTC"
+
+[network_watchdog]
+# How often to check connectivity (seconds)
+check_interval = 30
+
+# Timeout for connectivity checks (seconds)
+connectivity_timeout = 10
+
+# URL to check for internet connectivity
+# Should return HTTP 204 quickly
+connectivity_url = "http://connectivitycheck.gstatic.com/generate_204"
+
+[ap_mode]
+# Settings for the setup access point
+ssid = "TetherSetup"
+# channel = 6
+# band = "bg"
+ip_address = "192.168.4.1"
+netmask = "24"

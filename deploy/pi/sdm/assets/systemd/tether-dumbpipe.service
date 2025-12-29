@@ -1,0 +1,107 @@
+# tether-dumbpipe.service
+#
+# Exposes the tether HTTP server to the internet via dumbpipe/iroh.
+# Creates a secure P2P tunnel using QUIC with NAT traversal.
+#
+# This service:
+# 1. Starts dumbpipe in listen-tcp mode
+# 2. Captures the generated ticket
+# 3. Saves the ticket to /opt/tether/data/dumbpipe-ticket.txt
+# 4. Forwards incoming connections to localhost:3000 (tether-server)
+#
+# The ticket is a cryptographic credential that allows remote clients
+# (like the MCP server) to connect to this Raspberry Pi from anywhere.
+#
+# IMPORTANT: This service only starts AFTER onboarding is complete.
+# The ConditionPathExists ensures we don't expose an unconfigured device.
+
+[Unit]
+Description=Tether Dumbpipe Remote Access Tunnel
+Documentation=https://github.com/n0-computer/dumbpipe
+After=tether-server.service network-online.target
+Requires=tether-server.service
+Wants=network-online.target
+BindsTo=tether-server.service
+
+# Only start if onboarding is complete
+ConditionPathExists=/opt/tether/data/.configured
+
+[Service]
+# Service type: simple because dumbpipe runs in foreground
+Type=simple
+
+# Run as tether user
+User=tether
+Group=tether
+
+# Working directory
+WorkingDirectory=/opt/tether
+
+# Main execution using wrapper script to capture ticket
+ExecStart=/opt/tether/scripts/tether-save-ticket.sh
+
+# Pre-start: Ensure ticket file is writable
+ExecStartPre=/bin/touch /opt/tether/data/dumbpipe-ticket.txt
+ExecStartPre=/bin/chmod 600 /opt/tether/data/dumbpipe-ticket.txt
+
+# Restart policy - always restart for tunnel reliability
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+# Environment variables
+Environment=RUST_LOG=info,iroh=debug
+Environment=TETHER_TICKET_FILE=/opt/tether/data/dumbpipe-ticket.txt
+Environment=TETHER_LOCAL_SERVER=127.0.0.1:3000
+Environment=DUMBPIPE_BIN=/opt/tether/bin/dumbpipe
+
+# Logging
+StandardOutput=append:/opt/tether/logs/dumbpipe.log
+StandardError=append:/opt/tether/logs/dumbpipe.log
+SyslogIdentifier=tether-dumbpipe
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=false
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectClock=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+
+# Dumbpipe/iroh needs broader network access
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+
+# iroh may need JIT for crypto - keep this false
+MemoryDenyWriteExecute=false
+
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallArchitectures=native
+
+# Writable paths
+ReadWritePaths=/opt/tether/data /opt/tether/logs
+
+# Resource limits
+LimitNOFILE=1024
+MemoryMax=64M
+MemoryHigh=48M
+CPUQuota=50%
+
+# Timeouts
+TimeoutStartSec=60
+TimeoutStopSec=10
+KillSignal=SIGTERM
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

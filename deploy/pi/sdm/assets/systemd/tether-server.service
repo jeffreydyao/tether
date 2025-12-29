@@ -1,0 +1,111 @@
+# tether-server.service
+#
+# Main HTTP server for the tether application. Provides:
+# - REST API for Bluetooth proximity checking
+# - REST API for pass management
+# - REST API for configuration
+# - Web UI hosting
+# - OpenAPI specification endpoint
+#
+# This service runs ONLY on the local network and should NOT be exposed
+# directly to the internet. Remote access is provided via dumbpipe.
+#
+# Dependencies:
+# - bluetooth.service: BlueZ daemon for Bluetooth D-Bus API
+# - NetworkManager.service: WiFi management
+# - network-online.target: Ensures network stack is ready
+
+[Unit]
+Description=Tether Phone Accountability Service
+Documentation=https://github.com/yourrepo/tether
+After=network-online.target bluetooth.service NetworkManager.service
+Wants=network-online.target bluetooth.service
+Requires=network.target
+
+[Service]
+# Service type: simple because our Rust binary runs in foreground
+Type=simple
+
+# User and group to run as
+User=tether
+Group=tether
+
+# Working directory
+WorkingDirectory=/opt/tether
+
+# The main executable
+ExecStart=/opt/tether/bin/tether-server --config /opt/tether/config/tether.toml
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Environment variables
+Environment=RUST_BACKTRACE=1
+Environment=RUST_LOG=info,tether=debug
+Environment=TETHER_CONFIG_PATH=/opt/tether/config/tether.toml
+Environment=TETHER_DATA_DIR=/opt/tether/data
+Environment=TETHER_WEB_DIR=/opt/tether/web-ui
+
+# Logging
+StandardOutput=append:/opt/tether/logs/tether.log
+StandardError=append:/opt/tether/logs/tether.log
+SyslogIdentifier=tether-server
+
+# Runtime directories
+RuntimeDirectory=tether
+RuntimeDirectoryMode=0755
+StateDirectory=tether
+StateDirectoryMode=0750
+LogsDirectory=tether
+LogsDirectoryMode=0750
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=false
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectClock=true
+ProtectProc=default
+ProcSubset=pid
+RestrictNamespaces=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallArchitectures=native
+SystemCallErrorNumber=EPERM
+
+# Capabilities needed for Bluetooth D-Bus access
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+
+# Resource limits for Pi Zero 2 W (512MB RAM)
+LimitNOFILE=1024
+LimitNPROC=64
+MemoryMax=128M
+MemoryHigh=96M
+CPUQuota=80%
+
+# Writable paths
+ReadWritePaths=/opt/tether/data /opt/tether/logs /opt/tether/config
+ReadOnlyPaths=/opt/tether/web-ui
+
+# Timeouts
+TimeoutStartSec=30
+TimeoutStopSec=10
+KillSignal=SIGTERM
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
