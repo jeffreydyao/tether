@@ -37,6 +37,9 @@ pub use config::{
     ConfigResult, PassesConfig, SystemConfig, WifiConfig, WifiNetwork,
 };
 pub use error::{Error, Result};
-pub use passes::PassManager;
-pub use storage::Storage;
+pub use passes::{
+    current_month_string, is_valid_month_string, PassData, PassEntry, PassError, PassManager,
+    PassResult, MAX_REASON_LENGTH,
+};
+pub use storage::{default_data_dir, default_passes_path};
 pub use types::*;
